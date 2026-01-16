@@ -28,14 +28,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "yarn"
+          cache: "npm"
       - name: Install dependencies
-        run: yarn install --immutable
+        run: npm install --immutable
       - name: Build project
-        run: yarn build
-
+        run: npm run build
       - name: Lint project
-        run: yarn lint:all
+        run: npm run lint:all
 
       - name: Check README spelling
         uses: codespell-project/actions-codespell@v2
@@ -50,4 +49,4 @@ jobs:
           path: src/
 
       - name: Run tests
-        run: yarn test
+        run: npm run test
