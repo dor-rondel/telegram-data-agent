@@ -1,7 +1,14 @@
-.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests
+.PHONY: all format lint test tests test_watch integration_tests docker_tests help extended_tests graph_png
 
 # Default target executed when no arguments are given to make.
 all: help
+
+######################
+# GRAPH DIAGRAM
+######################
+
+graph_png:
+	python scripts/export_graph_png.py
 
 # Define a variable for the test file path.
 TEST_FILE ?= tests/unit_tests/
@@ -58,4 +65,5 @@ help:
 	@echo 'tests                        - run unit tests'
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
 	@echo 'test_watch                   - run unit tests in watch mode'
+	@echo 'graph_png                    - regenerate static/graph.png from the graph'
 

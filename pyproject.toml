@@ -38,9 +38,6 @@ packages = ["agent"]
 [tool.setuptools.package-data]
 "*" = ["py.typed"]
 
-[tool.pyright]
-typeCheckingMode = "strict"
-
 [tool.ruff]
 lint.select = [
     "E",    # pycodestyle

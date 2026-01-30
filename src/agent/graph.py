@@ -1,54 +1,69 @@
-"""LangGraph single-node graph template.
+"""LangGraph agent with TRANSLATE → EVALUATE loop, PLAN, and worker nodes.
 
-Returns a predefined response. Replace logic and configuration as needed.
+Flow:
+  START → TRANSLATE → EVALUATE → (loop until score >= threshold) → PLAN → WORKER → END
+
+Nodes return dummy data for now; replace with real implementations when ready.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Literal
 
-from langgraph.graph import StateGraph  # type: ignore
-from langgraph.runtime import Runtime
-from typing_extensions import TypedDict
+from langgraph.graph import END, START, StateGraph  # type: ignore[import-untyped]
+
+from agent.nodes import evaluate_node, plan_node, translate_node, worker_node
+from agent.nodes.worker import should_continue
+from agent.state import State
+
+# ---------------------------------------------------------------------------
+# Routing Functions
+# ---------------------------------------------------------------------------
 
 
-class Context(TypedDict):
-    """Context parameters for the agent.
+def route_after_evaluate(state: State) -> Literal["translate", "plan"]:
+    """Decide whether to continue the translate/evaluate loop or proceed to plan.
 
-    Set these when creating assistants OR when invoking the graph.
-    See: https://langchain-ai.github.io/langgraph/cloud/how-tos/configuration_cloud/
+    Returns "plan" if score >= threshold or max iterations reached.
+    Returns "translate" to continue the loop.
     """
+    score = state.get("score", 0.0)
+    threshold = state.get("threshold", 0.8)
+    iteration = state.get("iteration", 0)
+    max_iterations = state.get("max_iterations", 5)
 
-    my_configurable_param: str
-
-
-@dataclass
-class State:
-    """Input state for the agent.
-
-    Defines the initial structure of incoming data.
-    See: https://langchain-ai.github.io/langgraph/concepts/low_level/#state
-    """
-
-    changeme: str = "example"
+    if score >= threshold or iteration >= max_iterations:
+        return "plan"
+    return "translate"
 
 
-async def call_model(state: State, runtime: Runtime[Context]) -> Dict[str, Any]:
-    """Process input and returns output.
+# ---------------------------------------------------------------------------
+# Graph Definition
+# ---------------------------------------------------------------------------
 
-    Can use runtime context to alter behavior.
-    """
-    return {
-        "changeme": "output from call_model. "
-        f"Configured with {(runtime.context or {}).get('my_configurable_param')}"
-    }
+# Build the graph
+builder = StateGraph(State)
 
+# Add nodes
+builder.add_node("translate", translate_node)
+builder.add_node("evaluate", evaluate_node)
+builder.add_node("plan", plan_node)
+builder.add_node("worker", worker_node)
 
-# Define the graph
-graph = (
-    StateGraph(State, context_schema=Context)
-    .add_node(call_model)  # type: ignore
-    .add_edge("__start__", "call_model")
-    .compile(name="New Graph")
+# Add edges
+builder.add_edge(START, "translate")
+builder.add_edge("translate", "evaluate")
+builder.add_conditional_edges(
+    "evaluate",
+    route_after_evaluate,
+    {"translate": "translate", "plan": "plan"},
 )
+builder.add_edge("plan", "worker")
+builder.add_conditional_edges(
+    "worker",
+    should_continue,
+    {"worker": "worker", "end": END},
+)
+
+# Compile the graph
+graph = builder.compile(name="Telegram Data Agent")
