@@ -1,0 +1,44 @@
+name: PR checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, spell and typecheck, unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest ruff codespell pyright
+
+      - name: Ruff (format check)
+        run: python -m ruff format --check .
+
+      - name: Ruff (lint)
+        run: python -m ruff check .
+
+      - name: Pyright (type check)
+        run: python -m pyright
+
+      - name: Codespell
+        run: codespell --toml pyproject.toml
+
+      - name: Pytest (unit)
+        run: python -m pytest -q tests/unit_tests
