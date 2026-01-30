@@ -18,7 +18,10 @@ async def main() -> None:
         "threshold": 0.8,
         "iteration": 0,
         "max_iterations": 5,
-    }
+        # Dummy worker loop controls
+        "remaining_tool_calls": 1,
+        "worker_max_iterations": 10,
+    }  # type: ignore[arg-type]
     result = await graph.ainvoke(initial_state)  # type: ignore[arg-type]
     print(result)  # noqa: T201
 
