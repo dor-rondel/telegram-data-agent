@@ -24,30 +24,39 @@ MAX_RETRIES = 3
 RETRY_BASE_DELAY_SECONDS = 1.0
 
 
-def _generate_incident_id(incident: IncidentData) -> str:
+def _generate_incident_id(incident: IncidentData, created_at: str) -> str:
     """Generate a unique incident ID by hashing location, crime, and timestamp.
 
     Args:
         incident: The incident data to generate an ID for.
+        created_at: ISO 8601 timestamp string for the incident.
 
     Returns:
         A SHA-256 hash string uniquely identifying the incident.
     """
-    key_string = f"{incident['location']}:{incident['crime']}:{incident['created_at']}"
+    key_string = f"{incident['location']}:{incident['crime']}:{created_at}"
     return hashlib.sha256(key_string.encode()).hexdigest()
 
 
-def _extract_year_month(unix_timestamp: int) -> str:
-    """Extract year-month string from Unix timestamp.
+def _get_current_timestamp() -> str:
+    """Get current UTC timestamp as ISO 8601 string.
+
+    Returns:
+        ISO 8601 formatted timestamp string (e.g., "2026-01-31T12:30:45Z").
+    """
+    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _extract_year_month_from_iso(iso_timestamp: str) -> str:
+    """Extract year-month string from ISO 8601 timestamp.
 
     Args:
-        unix_timestamp: Unix timestamp in seconds.
+        iso_timestamp: ISO 8601 formatted timestamp string.
 
     Returns:
         Year-month string in format "YYYY-MM" (e.g., "2026-01").
     """
-    dt = datetime.fromtimestamp(unix_timestamp, tz=UTC)
-    return dt.strftime("%Y-%m")
+    return iso_timestamp[:7]
 
 
 def _get_dynamodb_table() -> Any:
@@ -144,8 +153,9 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
         ClientError: If a DynamoDB operation fails after retries.
         KeyError: If required environment variables are not set.
     """
-    year_month = _extract_year_month(incident["created_at"])
-    incident_id = _generate_incident_id(incident)
+    created_at = _get_current_timestamp()
+    year_month = _extract_year_month_from_iso(created_at)
+    incident_id = _generate_incident_id(incident, created_at)
 
     logger.info(
         "Upserting incident to DynamoDB: year_month=%s, incident_id=%s",
@@ -160,7 +170,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
         "incident_id": incident_id,
         "location": incident["location"],
         "crime": incident["crime"],
-        "created_at": incident["created_at"],
+        "created_at": created_at,
     }
 
     # Check if monthly partition exists and if incident is a duplicate

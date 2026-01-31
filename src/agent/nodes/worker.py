@@ -38,7 +38,6 @@ def _get_llm() -> ChatGroq:
 def send_email(
     location: str,
     crime: str,
-    created_at: int,
 ) -> dict[str, Any]:
     """Send a terror incident alert email via AWS SES.
 
@@ -48,7 +47,6 @@ def send_email(
     Args:
         location: The location where the incident occurred.
         crime: The type of crime (e.g., rock_throwing, stabbing).
-        created_at: Unix timestamp in milliseconds when the incident was created.
 
     Returns:
         A dictionary with the operation result.
@@ -56,7 +54,6 @@ def send_email(
     incident: IncidentData = {
         "location": location,
         "crime": crime,  # type: ignore[typeddict-item]
-        "created_at": created_at,
     }
     return send_email_impl(incident)
 
@@ -65,7 +62,6 @@ def send_email(
 def push_to_dynamodb(
     location: str,
     crime: str,
-    created_at: int,
 ) -> dict[str, Any]:
     """Store an incident record in DynamoDB.
 
@@ -75,7 +71,6 @@ def push_to_dynamodb(
     Args:
         location: The location where the incident occurred.
         crime: The type of crime (e.g., rock_throwing, stabbing).
-        created_at: Unix timestamp in milliseconds when the incident was created.
 
     Returns:
         A dictionary with the operation result.
@@ -83,7 +78,6 @@ def push_to_dynamodb(
     incident: IncidentData = {
         "location": location,
         "crime": crime,  # type: ignore[typeddict-item]
-        "created_at": created_at,
     }
     return push_to_dynamodb_impl(incident)
 
@@ -117,7 +111,6 @@ def _build_user_prompt(state: State) -> str:
                 "## Incident Data",
                 f"- location: {incident_data['location']}",
                 f"- crime: {incident_data['crime']}",
-                f"- created_at: {incident_data['created_at']}",
             ]
         )
     else:
@@ -213,7 +206,6 @@ async def worker_node(state: State) -> dict[str, Any]:
                         {
                             "location": tool_args.get("location", ""),
                             "crime": tool_args.get("crime", ""),
-                            "created_at": tool_args.get("created_at", 0),
                         }
                     )
                     actions_taken.append("send_email")
@@ -222,7 +214,6 @@ async def worker_node(state: State) -> dict[str, Any]:
                         {
                             "location": tool_args.get("location", ""),
                             "crime": tool_args.get("crime", ""),
-                            "created_at": tool_args.get("created_at", 0),
                         }
                     )
                     actions_taken.append("push_to_dynamodb")

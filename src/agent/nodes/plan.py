@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
 from enum import Enum
 from typing import Any
 
@@ -93,12 +92,11 @@ def _build_incident_data(
         crime: The classified crime type.
 
     Returns:
-        Dictionary with location, crime, and created_at timestamp.
+        Dictionary with location and crime.
     """
     return {
         "location": location,
         "crime": crime,
-        "created_at": int(time.time() * 1000),
     }
 
 

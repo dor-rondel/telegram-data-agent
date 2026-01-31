@@ -25,7 +25,6 @@ class IncidentData(TypedDict):
 
     location: str
     crime: IncidentCrime
-    created_at: int
 
 
 class State(TypedDict):

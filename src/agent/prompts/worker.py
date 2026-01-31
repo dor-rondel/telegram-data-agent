@@ -42,11 +42,11 @@ This indicates the event was not relevant or there was an error in processing.
 
 ### send_email
 Sends a styled HTML email alert about the incident.
-Input: incident data with location, crime, and created_at fields
+Input: incident data with location and crime fields. Timestamp is generated automatically.
 
 ### push_to_dynamodb
 Stores the incident in DynamoDB organized by year-month partitions.
-Input: incident data with location, crime, and created_at fields
+Input: incident data with location and crime fields. Timestamp is generated automatically.
 
 Remember: Be decisive and execute the appropriate tools based on the plan. \
 Do not ask for clarification - use the data provided to make the right decision.\

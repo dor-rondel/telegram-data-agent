@@ -43,10 +43,9 @@ def test_build_html_email_contains_terror_alert() -> None:
     incident: IncidentData = {
         "location": "Test Location",
         "crime": "rock_throwing",
-        "created_at": 1640995200,  # 2022-01-01 00:00:00 UTC
     }
 
-    html = _build_html_email(incident)
+    html = _build_html_email(incident, "2026-01-31T12:00:00Z")
     assert "Terror Incident Alert" in html
     assert "⚠️" in html
 
@@ -56,14 +55,14 @@ def test_build_html_email_contains_incident_details() -> None:
     incident: IncidentData = {
         "location": "Jerusalem Central",
         "crime": "molotov_cocktail",
-        "created_at": 1640995200,
     }
+    timestamp = "2026-01-31T12:00:00Z"
 
-    html = _build_html_email(incident)
+    html = _build_html_email(incident, timestamp)
 
     assert "Jerusalem Central" in html
     assert "Molotov Cocktail" in html
-    assert "1640995200" in html
+    assert timestamp in html
 
 
 def test_build_html_email_structure() -> None:
@@ -71,10 +70,9 @@ def test_build_html_email_structure() -> None:
     incident: IncidentData = {
         "location": "Test Location",
         "crime": "stabbing",
-        "created_at": 1640995200,
     }
 
-    html = _build_html_email(incident)
+    html = _build_html_email(incident, "2026-01-31T12:00:00Z")
 
     # Check for HTML structure
     assert "<!DOCTYPE html>" in html
@@ -98,10 +96,9 @@ def test_build_plain_text_email_contains_terror_alert() -> None:
     incident: IncidentData = {
         "location": "Test Location",
         "crime": "rock_throwing",
-        "created_at": 1640995200,
     }
 
-    text = _build_plain_text_email(incident)
+    text = _build_plain_text_email(incident, "2026-01-31T12:00:00Z")
     assert "TERROR INCIDENT ALERT" in text
     assert "=====================" in text
 
@@ -111,14 +108,14 @@ def test_build_plain_text_email_contains_incident_details() -> None:
     incident: IncidentData = {
         "location": "Tel Aviv",
         "crime": "shooting",
-        "created_at": 1640995200,
     }
+    timestamp = "2026-01-31T12:00:00Z"
 
-    text = _build_plain_text_email(incident)
+    text = _build_plain_text_email(incident, timestamp)
 
     assert "Tel Aviv" in text
     assert "Shooting" in text
-    assert "1640995200" in text
+    assert timestamp in text
 
 
 def test_build_plain_text_email_structure() -> None:
@@ -126,10 +123,9 @@ def test_build_plain_text_email_structure() -> None:
     incident: IncidentData = {
         "location": "Haifa",
         "crime": "ramming",
-        "created_at": 1640995200,
     }
 
-    text = _build_plain_text_email(incident)
+    text = _build_plain_text_email(incident, "2026-01-31T12:00:00Z")
 
     # Check for section headers
     assert "INCIDENT DETAILS:" in text
@@ -145,10 +141,9 @@ def test_build_plain_text_email_with_special_characters() -> None:
     incident: IncidentData = {
         "location": "Jerusalem - Old City",
         "crime": "theft",
-        "created_at": 1640995200,
     }
 
-    text = _build_plain_text_email(incident)
+    text = _build_plain_text_email(incident, "2026-01-31T12:00:00Z")
     assert "Jerusalem - Old City" in text
     assert "Theft" in text
 
@@ -158,9 +153,8 @@ def test_build_html_email_with_special_characters() -> None:
     incident: IncidentData = {
         "location": "Jerusalem - Old City",
         "crime": "theft",
-        "created_at": 1640995200,
     }
 
-    html = _build_html_email(incident)
+    html = _build_html_email(incident, "2026-01-31T12:00:00Z")
     assert "Jerusalem - Old City" in html
     assert "Theft" in html
