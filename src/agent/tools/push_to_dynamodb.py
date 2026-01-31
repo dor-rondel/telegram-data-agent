@@ -76,6 +76,15 @@ def _get_dynamodb_table() -> Any:
     return dynamodb.Table(table_name)
 
 
+def _get_partition_key_name() -> str:
+    """Get DynamoDB partition key name from environment.
+
+    Returns:
+        Partition key attribute name (defaults to "year_month").
+    """
+    return os.environ.get("DYNAMODB_PARTITION_KEY", "year_month")
+
+
 def _execute_with_retry(operation: Any, operation_name: str) -> Any:
     """Execute a DynamoDB operation with retry logic for transient errors.
 
@@ -164,6 +173,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
     )
 
     table = _get_dynamodb_table()
+    partition_key = _get_partition_key_name()
 
     # Build the incident entry with its ID
     incident_entry = {
@@ -175,7 +185,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
 
     # Check if monthly partition exists and if incident is a duplicate
     def get_existing_item() -> dict[str, Any] | None:
-        response = table.get_item(Key={"year_month": year_month})
+        response = table.get_item(Key={partition_key: year_month})
         return response.get("Item")
 
     existing_item = _execute_with_retry(get_existing_item, "get_item")
@@ -201,7 +211,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
         # Append to existing partition
         def update_item() -> None:
             table.update_item(
-                Key={"year_month": year_month},
+                Key={partition_key: year_month},
                 UpdateExpression="SET incidents = list_append(incidents, :new_incident)",
                 ExpressionAttributeValues={":new_incident": [incident_entry]},
             )
@@ -217,7 +227,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
         def put_item() -> None:
             table.put_item(
                 Item={
-                    "year_month": year_month,
+                    partition_key: year_month,
                     "incidents": [incident_entry],
                 }
             )

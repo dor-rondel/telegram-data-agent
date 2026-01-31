@@ -4,11 +4,30 @@ LangGraph-based data agent for ingesting Telegram channel messages, transforming
 
 Target runtime: AWS Lambda.
 
+## Architecture Overview
+
+The agent processes incident reports through a multi-node LangGraph pipeline:
+
+1. **Translate Node** – Translates Hebrew Telegram messages to English using Groq LLM
+2. **Evaluate Node** – Scores translation quality and provides feedback for refinement
+3. **Plan Node** – Analyzes translated text to extract structured incident data (location, crime type) and determines if email alerts are needed
+4. **Worker Node** – ReAct-style agent that executes tools based on the plan:
+   - `push_to_dynamodb` – Stores incidents in monthly partitions with deduplication
+   - `send_email` – Sends styled HTML alerts via AWS SES for high-priority incidents
+
+![Graph Visualization](static/graph.png)
+
+### Key Design Decisions
+
+- **Timestamps generated at tool execution** – Each tool generates its own ISO 8601 timestamp locally, avoiding state synchronization issues
+- **Idempotent DynamoDB writes** – Incidents are deduplicated using a hash of location + crime + timestamp
+- **Monthly partitions** – DynamoDB items are organized by year-month for efficient querying
+
 ## What This Repo Contains
 
-- A LangGraph graph entrypoint defined in [langgraph.json](langgraph.json) and implemented in [src/agent/graph.py](src/agent/graph.py).
-- Unit tests under [tests/](tests/).
-- Project-wide engineering rules for agents in [.github/workflows/AGENTS.md](.github/workflows/AGENTS.md).
+- A LangGraph graph entrypoint defined in [langgraph.json](langgraph.json) and implemented in [src/agent/graph.py](src/agent/graph.py)
+- Unit tests under [tests/](tests/)
+- Project-wide engineering rules for agents in [.github/AGENTS.md](.github/AGENTS.md)
 
 ## Installation
 
@@ -61,9 +80,28 @@ For a quick manual smoke test, run the module entry point:
 
 This invokes the graph with a minimal sample input and prints the result. For more thorough validation, prefer unit tests under [tests/](tests/).
 
-## Roadmap (High Level)
+## Environment Variables
 
-- Telegram ingestion adapter (channel polling / webhook ingestion)
-- Message translation, parsing, and tagging nodes
-- DynamoDB persistence repository + idempotency
-- Email notifier adapter (for example, SES)
+Copy `.env.example` to `.env` and configure:
+
+| Variable                 | Description                                          | Required |
+| ------------------------ | ---------------------------------------------------- | -------- |
+| `GROQ_API_KEY`           | Groq API key for LLM access                          | Yes      |
+| `GROQ_MODEL_NAME`        | Groq model (default: `llama-3.3-70b-versatile`)      | No       |
+| `LANGCHAIN_PROJECT`      | LangSmith project name for tracing                   | No       |
+| `LANGSMITH_API_KEY`      | LangSmith API key                                    | No       |
+| `AWS_ACCESS_KEY_ID`      | AWS credentials                                      | Yes      |
+| `AWS_SECRET_ACCESS_KEY`  | AWS credentials                                      | Yes      |
+| `AWS_REGION`             | AWS region (default: `us-east-1`)                    | No       |
+| `DYNAMODB_TABLE_NAME`    | DynamoDB table for incident storage                  | Yes      |
+| `DYNAMODB_PARTITION_KEY` | Partition key attribute name (default: `year_month`) | No       |
+| `SES_SENDER_EMAIL`       | Verified SES sender email                            | Yes      |
+| `SES_RECIPIENT_EMAIL`    | Alert recipient email                                | Yes      |
+
+## Graph Visualization
+
+Generate a PNG of the graph structure:
+
+- `make graph_png`
+
+Output is saved to `static/graph.png`.
