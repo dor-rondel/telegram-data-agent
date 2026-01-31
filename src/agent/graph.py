@@ -4,6 +4,7 @@ Flow:
   START → TRANSLATE → EVALUATE → (loop until score >= threshold) → PLAN → WORKER → END
 
 If max iterations reached without meeting threshold, routes to END with error state.
+If event is not relevant (not in Judea & Samaria or not crime/terror), PLAN routes to END.
 """
 
 from __future__ import annotations
@@ -45,6 +46,19 @@ def route_after_evaluate(
     return "translate"
 
 
+def route_after_plan(
+    state: State,
+) -> Literal["worker", "__end__"]:
+    """Decide whether to proceed to worker or end early.
+
+    Returns "__end__" if skip_processing is True (event not relevant).
+    Returns "worker" to continue processing the incident.
+    """
+    if state.get("skip_processing", False):
+        return "__end__"
+    return "worker"
+
+
 # ---------------------------------------------------------------------------
 # Graph Definition
 # ---------------------------------------------------------------------------
@@ -66,7 +80,11 @@ builder.add_conditional_edges(
     route_after_evaluate,
     {"translate": "translate", "plan": "plan", "__end__": END},
 )
-builder.add_edge("plan", "worker")
+builder.add_conditional_edges(
+    "plan",
+    route_after_plan,
+    {"worker": "worker", "__end__": END},
+)
 builder.add_conditional_edges(
     "worker",
     should_continue,
