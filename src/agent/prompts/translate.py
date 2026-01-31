@@ -1,4 +1,4 @@
-"""System prompt for the translate node."""
+"""Prompts for the translate node."""
 
 TRANSLATE_SYSTEM_PROMPT = """\
 You are a professional Hebrew to English translator.
@@ -14,4 +14,18 @@ Guidelines:
 - Do not include phrases like "Here is the translation:" or similar
 
 Output ONLY the English translation, nothing else.\
+"""
+
+TRANSLATE_USER_PROMPT_TEMPLATE = """\
+{feedback_section}Text to translate:
+{text}\
+"""
+
+TRANSLATE_FEEDBACK_SECTION = """\
+Your previous translation attempt was reviewed. Please address this feedback:
+{feedback}
+
+Previous translation:
+{previous_translation}
+
 """

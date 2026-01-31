@@ -3,7 +3,7 @@
 Flow:
   START → TRANSLATE → EVALUATE → (loop until score >= threshold) → PLAN → WORKER → END
 
-Nodes return dummy data for now; replace with real implementations when ready.
+If max iterations reached without meeting threshold, routes to END with error state.
 """
 
 from __future__ import annotations
@@ -21,19 +21,27 @@ from agent.state import State
 # ---------------------------------------------------------------------------
 
 
-def route_after_evaluate(state: State) -> Literal["translate", "plan"]:
+def route_after_evaluate(
+    state: State,
+) -> Literal["translate", "plan", "__end__"]:
     """Decide whether to continue the translate/evaluate loop or proceed to plan.
 
-    Returns "plan" if score >= threshold or max iterations reached.
+    Returns "plan" if score >= threshold.
+    Returns "__end__" if max iterations reached without meeting threshold.
     Returns "translate" to continue the loop.
     """
     score = state.get("score", 0.0)
-    threshold = state.get("threshold", 0.8)
+    threshold = state.get("threshold", 0.75)
     iteration = state.get("iteration", 0)
     max_iterations = state.get("max_iterations", 5)
 
-    if score >= threshold or iteration >= max_iterations:
+    if score >= threshold:
         return "plan"
+
+    if iteration >= max_iterations:
+        # Max iterations exhausted without meeting threshold
+        return "__end__"
+
     return "translate"
 
 
@@ -56,7 +64,7 @@ builder.add_edge("translate", "evaluate")
 builder.add_conditional_edges(
     "evaluate",
     route_after_evaluate,
-    {"translate": "translate", "plan": "plan"},
+    {"translate": "translate", "plan": "plan", "__end__": END},
 )
 builder.add_edge("plan", "worker")
 builder.add_conditional_edges(

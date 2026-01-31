@@ -15,6 +15,8 @@ class State(TypedDict):
     input_text: str
     translated_text: str
     score: float
+    feedback: str
+    error_message: str
     threshold: float
     iteration: int
     max_iterations: int

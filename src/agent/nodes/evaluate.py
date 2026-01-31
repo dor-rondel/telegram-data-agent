@@ -1,21 +1,122 @@
 """EVALUATE node.
 
-Dummy implementation for now.
+Evaluates translation quality using an LLM and provides feedback.
 """
 
 from __future__ import annotations
 
+import json
+import logging
+import os
 from typing import Any
 
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_groq import ChatGroq
+
+from agent.prompts import EVALUATE_SYSTEM_PROMPT, EVALUATE_USER_PROMPT_TEMPLATE
 from agent.state import State
 
+logger = logging.getLogger(__name__)
 
-def evaluate_node(state: State) -> dict[str, Any]:
-    """Evaluate translation quality and update score.
 
-    Dummy: increments score by 0.3 each iteration until threshold.
+def _get_llm() -> ChatGroq:
+    """Get configured ChatGroq instance for evaluation."""
+    return ChatGroq(
+        api_key=os.environ.get("GROQ_API_KEY"),  # type: ignore[arg-type]
+        model=os.environ.get("GROQ_MODEL_NAME", "llama-3.3-70b-versatile"),
+        temperature=0,
+        max_tokens=1024,
+    )
+
+
+def _parse_evaluation_response(response_text: str) -> dict[str, Any]:
+    """Parse the LLM evaluation response JSON.
+
+    Args:
+        response_text: Raw response text from the LLM.
+
+    Returns:
+        Dictionary with 'score' (normalized 0-1) and 'feedback' keys.
     """
-    current_score = state.get("score", 0.0)
-    current_iter = state.get("iteration", 0)
-    new_score = min(current_score + 0.3, 1.0)
-    return {"score": new_score, "iteration": current_iter + 1}
+    parsed = json.loads(response_text.strip())
+    return {
+        "score": float(parsed["score"]) / 10.0,
+        "feedback": str(parsed["feedback"]),
+    }
+
+
+async def evaluate_node(state: State) -> dict[str, Any]:
+    """Evaluate translation quality and provide feedback.
+
+    Uses an LLM to score the translation from 0-10 and provide feedback
+    if the score is below the threshold.
+
+    Args:
+        state: Current graph state containing input_text and translated_text.
+
+    Returns:
+        Dictionary with score, feedback, and incremented iteration count.
+
+    Raises:
+        TranslationEvaluationError: If max iterations reached with score below threshold.
+    """
+    input_text = state.get("input_text", "")
+    translated_text = state.get("translated_text", "")
+    current_iteration = state.get("iteration", 0)
+    max_iterations = state.get("max_iterations", 5)
+    threshold = state.get("threshold", 0.75)
+
+    # Increment iteration at the start
+    new_iteration = current_iteration + 1
+
+    if not translated_text:
+        return {
+            "score": 0.0,
+            "feedback": "No translation provided.",
+            "iteration": new_iteration,
+        }
+
+    llm = _get_llm()
+
+    user_prompt = EVALUATE_USER_PROMPT_TEMPLATE.format(
+        original_text=input_text,
+        translated_text=translated_text,
+    )
+
+    messages = [
+        SystemMessage(content=EVALUATE_SYSTEM_PROMPT),
+        HumanMessage(content=user_prompt),
+    ]
+
+    try:
+        response = await llm.ainvoke(messages)
+        response_text = str(response.content) if response.content else ""
+        result = _parse_evaluation_response(response_text)
+    except json.JSONDecodeError:
+        logger.exception("Failed to parse evaluation response")
+        result = {
+            "score": 0.0,
+            "feedback": "Evaluation parsing failed. Please re-translate.",
+        }
+    except Exception:
+        logger.exception("Evaluation failed")
+        raise
+
+    score = result["score"]
+    feedback = result["feedback"]
+
+    # Check if we've exhausted iterations without meeting threshold
+    error_message = ""
+    if new_iteration >= max_iterations and score < threshold:
+        error_message = (
+            f"Translation quality threshold ({threshold}) not met after "
+            f"{max_iterations} iterations. Final score: {score:.2f}"
+        )
+        logger.warning(error_message)
+
+    return {
+        "score": score,
+        "feedback": feedback,
+        "iteration": new_iteration,
+        "error_message": error_message,
+    }

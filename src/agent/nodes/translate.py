@@ -12,7 +12,11 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 
-from agent.prompts import TRANSLATE_SYSTEM_PROMPT
+from agent.prompts import (
+    TRANSLATE_FEEDBACK_SECTION,
+    TRANSLATE_SYSTEM_PROMPT,
+    TRANSLATE_USER_PROMPT_TEMPLATE,
+)
 from agent.state import State
 from agent.utils import sanitize_user_input
 
@@ -29,16 +33,36 @@ def _get_llm() -> ChatGroq:
     )
 
 
+def _build_user_prompt(
+    text: str,
+    feedback: str,
+    previous_translation: str,
+) -> str:
+    """Build the user prompt, including feedback if available."""
+    feedback_section = ""
+    if feedback and previous_translation:
+        feedback_section = TRANSLATE_FEEDBACK_SECTION.format(
+            feedback=feedback,
+            previous_translation=previous_translation,
+        )
+    return TRANSLATE_USER_PROMPT_TEMPLATE.format(
+        feedback_section=feedback_section,
+        text=text,
+    )
+
+
 async def translate_node(state: State) -> dict[str, Any]:
     """Translate Hebrew input text to English.
 
     Args:
-        state: Current graph state containing input_text.
+        state: Current graph state containing input_text and optional feedback.
 
     Returns:
         Dictionary with translated_text key containing the English translation.
     """
     input_text = state.get("input_text", "")
+    feedback = state.get("feedback", "")
+    previous_translation = state.get("translated_text", "")
 
     if not input_text:
         return {"translated_text": ""}
@@ -50,10 +74,11 @@ async def translate_node(state: State) -> dict[str, Any]:
         return {"translated_text": ""}
 
     llm = _get_llm()
+    user_prompt = _build_user_prompt(sanitized_input, feedback, previous_translation)
 
     messages = [
         SystemMessage(content=TRANSLATE_SYSTEM_PROMPT),
-        HumanMessage(content=sanitized_input),
+        HumanMessage(content=user_prompt),
     ]
 
     try:
