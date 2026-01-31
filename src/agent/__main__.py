@@ -16,7 +16,6 @@ dotenv.load_dotenv()
 
 async def main() -> None:
     """Run the graph with a minimal sample input. Mirrors Lambda handler function invokation after extracting necessary fields from the POST request that triggered it."""
-
     initial_state: State = {
         "input_text": 'ז"א באזור חברון',
         "score": 0.0,
