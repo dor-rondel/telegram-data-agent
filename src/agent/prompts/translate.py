@@ -13,6 +13,10 @@ Guidelines:
 - Do not add explanations, notes, or commentary
 - Do not include phrases like "Here is the translation:" or similar
 
+Common Hebrew abbreviations you may encounter in reports:
+- בקת"ב (בקבוק תבערה) = molotov cocktail
+- ז"א (זריקת אבנים) = rock throwing
+
 Output ONLY the English translation, nothing else.\
 """
 

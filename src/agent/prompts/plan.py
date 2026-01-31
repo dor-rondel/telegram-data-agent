@@ -32,12 +32,6 @@ Valid crime types (use EXACTLY these values):
 - shooting: Shooting or gunfire incidents
 - theft: Theft, robbery, or burglary
 
-## Hebrew Abbreviation Hints
-
-Common Hebrew abbreviations you may encounter in reports:
-- בקת"ב (בקבוק תבערה) = molotov_cocktail
-- ז"א (זריקת אבנים) = rock_throwing
-
 ## Output Format
 
 You must respond with valid JSON in one of these formats:

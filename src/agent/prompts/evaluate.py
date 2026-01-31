@@ -9,6 +9,10 @@ You will be given:
 1. The original Hebrew text
 2. The English translation
 
+Common Hebrew abbreviations you may encounter in reports:
+- בקת"ב (בקבוק תבערה) = molotov cocktail
+- ז"א (זריקת אבנים) = rock throwing
+
 Evaluate the translation based on these criteria:
 - Accuracy: Does the translation convey the correct meaning?
 - Fluency: Is the English natural and grammatically correct?
