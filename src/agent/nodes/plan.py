@@ -191,7 +191,6 @@ async def plan_node(state: State) -> dict[str, Any]:
         logger.info("Incident detected: %s", incident_data)
 
     return {
-        "skip_processing": False,
         "incident_data": incident_data,
         "requires_email_alert": requires_email,
         "plan_reason": "Relevant incident in Judea & Samaria",
