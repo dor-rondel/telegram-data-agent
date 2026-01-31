@@ -7,13 +7,17 @@ from __future__ import annotations
 
 import asyncio
 
+import dotenv
+
 from agent.graph import State, graph
+
+dotenv.load_dotenv()
 
 
 async def main() -> None:
     """Run the graph with a minimal sample input."""
     initial_state: State = {
-        "input_text": "Hello, this is a test message.",
+        "input_text": "היי אני מנסה להריץ את הסוכן, בא נראה אם זה עובד",
         "score": 0.0,
         "threshold": 0.8,
         "iteration": 0,
