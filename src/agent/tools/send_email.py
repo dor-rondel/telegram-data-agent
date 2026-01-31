@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 import boto3
@@ -20,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
 RETRY_BASE_DELAY_SECONDS = 1.0
+
+
+def _get_current_timestamp() -> str:
+    """Get current UTC timestamp as ISO 8601 string.
+
+    Returns:
+        ISO 8601 formatted timestamp string (e.g., "2026-01-31T12:30:45Z").
+    """
+    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _get_ses_client() -> Any:
@@ -49,11 +59,12 @@ def _format_crime_type(crime: str) -> str:
     return crime.replace("_", " ").title()
 
 
-def _build_html_email(incident: IncidentData) -> str:
+def _build_html_email(incident: IncidentData, timestamp: str) -> str:
     """Build styled HTML email body for terror incident alert.
 
     Args:
         incident: The incident data to include in the email.
+        timestamp: ISO 8601 formatted timestamp string.
 
     Returns:
         HTML-formatted email body string.
@@ -84,7 +95,7 @@ def _build_html_email(incident: IncidentData) -> str:
             </tr>
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;">Timestamp:</td>
-                <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{incident["created_at"]}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{timestamp}</td>
             </tr>
         </table>
         <p style="margin-bottom: 0; font-size: 12px; color: #6c757d;">
@@ -95,11 +106,12 @@ def _build_html_email(incident: IncidentData) -> str:
 </html>"""
 
 
-def _build_plain_text_email(incident: IncidentData) -> str:
+def _build_plain_text_email(incident: IncidentData, timestamp: str) -> str:
     """Build plain text email body for terror incident alert.
 
     Args:
         incident: The incident data to include in the email.
+        timestamp: ISO 8601 formatted timestamp string.
 
     Returns:
         Plain text email body string.
@@ -115,7 +127,7 @@ INCIDENT DETAILS:
 -----------------
 Location: {incident["location"]}
 Incident Type: {crime_display}
-Timestamp: {incident["created_at"]}
+Timestamp: {timestamp}
 
 ---
 This is an automated alert from the Telegram Data Agent."""
@@ -205,8 +217,9 @@ def send_email(incident: IncidentData) -> dict[str, Any]:
     crime_display = _format_crime_type(incident["crime"])
     subject = f"Terror Incident Alert: {crime_display} at {incident['location']}"
 
-    html_body = _build_html_email(incident)
-    text_body = _build_plain_text_email(incident)
+    timestamp = _get_current_timestamp()
+    html_body = _build_html_email(incident, timestamp)
+    text_body = _build_plain_text_email(incident, timestamp)
 
     logger.info(
         "Sending terror incident alert email to %s for incident at %s",

@@ -64,11 +64,7 @@ def test_parse_plan_response_invalid_crime_raises_value_error() -> None:
         )
 
 
-def test_build_incident_data_includes_timestamp_ms(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(plan_module.time, "time", lambda: 1700000000.123)
-
+def test_build_incident_data_returns_location_and_crime() -> None:
     result = plan_module._build_incident_data(
         location="Jerusalem",
         crime=plan_module.CrimeType.ROCK_THROWING.value,
@@ -77,5 +73,4 @@ def test_build_incident_data_includes_timestamp_ms(
     assert result == {
         "location": "Jerusalem",
         "crime": plan_module.CrimeType.ROCK_THROWING.value,
-        "created_at": 1700000000123,
     }

@@ -1,8 +1,22 @@
 # Agent Instructions (Project-Wide)
 
-This repository is a Python 3.11+ side project built around a LangGraph (1.0+) agent that processes Telegram channel messages. The agent will eventually include nodes responsible for translating, parsing, and tagging messages, then persisting results to DynamoDB and/or sending an email when certain criteria match. The target runtime is AWS Lambda.
+This repository is a Python 3.11+ side project built around a LangGraph (1.0+) agent that processes Telegram channel messages. The agent includes nodes for translating, parsing, and tagging messages, then persisting results to DynamoDB and/or sending email alerts when certain criteria match. The target runtime is AWS Lambda.
 
 These instructions are authoritative for any automated coding agent working in this repo.
+
+## Current Architecture
+
+The graph flows through these nodes:
+
+1. **translate** → **evaluate** (loop until quality threshold met)
+2. **plan** (extracts `IncidentData`: location + crime type)
+3. **worker** (ReAct agent executing `push_to_dynamodb` and optionally `send_email`)
+
+### State Schema
+
+- `IncidentData` contains only `location` and `crime` (no timestamp)
+- Timestamps are generated locally within each tool at execution time using ISO 8601 format
+- This design avoids state synchronization issues and ensures accurate timestamps
 
 ## Core Principles
 
@@ -117,6 +131,9 @@ Notes:
 - Use boto3 DynamoDB clients/resources via a dedicated repository layer.
 - Validate and normalize data before writing.
 - Prefer explicit attribute names and stable key design.
+- The partition key name is configurable via `DYNAMODB_PARTITION_KEY` env var (defaults to `year_month`).
+- Incidents are stored in monthly partitions with an `incidents` list attribute.
+- Each incident entry includes: `incident_id`, `location`, `crime`, and `created_at` (ISO 8601 string).
 - Handle retries and conditional failures intentionally; do not silently drop errors.
 
 ## Email Conventions

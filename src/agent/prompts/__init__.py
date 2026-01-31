@@ -13,6 +13,7 @@ from agent.prompts.translate import (
     TRANSLATE_SYSTEM_PROMPT,
     TRANSLATE_USER_PROMPT_TEMPLATE,
 )
+from agent.prompts.worker import WORKER_SYSTEM_PROMPT
 
 __all__ = [
     "EVALUATE_SYSTEM_PROMPT",
@@ -22,4 +23,5 @@ __all__ = [
     "TRANSLATE_FEEDBACK_SECTION",
     "TRANSLATE_SYSTEM_PROMPT",
     "TRANSLATE_USER_PROMPT_TEMPLATE",
+    "WORKER_SYSTEM_PROMPT",
 ]
