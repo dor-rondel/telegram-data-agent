@@ -50,7 +50,7 @@ If the event IS relevant (in West Bank/Jerusalem AND is crime/terror):
     "requires_email_alert": true/false (true only if location is Jerusalem)
 }
 
-Output ONLY valid JSON, nothing else.\
+Output ONLY valid JSON, nothing else. Don't include markdown characters like ```json ``` \
 """
 
 PLAN_USER_PROMPT_TEMPLATE = """\
