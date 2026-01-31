@@ -9,29 +9,18 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any, Literal
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
-from langchain_groq import ChatGroq
 
 from agent.prompts import WORKER_SYSTEM_PROMPT
 from agent.state import IncidentData, State
 from agent.tools import push_to_dynamodb as push_to_dynamodb_impl
 from agent.tools import send_email as send_email_impl
+from agent.utils import get_groq_llm
 
 logger = logging.getLogger(__name__)
-
-
-def _get_llm() -> ChatGroq:
-    """Get configured ChatGroq instance for the worker agent."""
-    return ChatGroq(
-        api_key=os.environ.get("GROQ_API_KEY"),  # type: ignore[arg-type]
-        model=os.environ.get("GROQ_MODEL_NAME", "llama-3.3-70b-versatile"),
-        temperature=0,
-        max_tokens=1024,
-    )
 
 
 @tool
@@ -158,7 +147,7 @@ async def worker_node(state: State) -> dict[str, Any]:
             "should_end": True,
         }
 
-    llm = _get_llm()
+    llm = get_groq_llm()
     llm_with_tools = llm.bind_tools(WORKER_TOOLS)
 
     user_prompt = _build_user_prompt(state)
@@ -225,8 +214,6 @@ async def worker_node(state: State) -> dict[str, Any]:
                 logger.exception("Tool execution failed: %s", tool_name)
 
             # Add tool result as a message for the agent
-            from langchain_core.messages import ToolMessage
-
             messages.append(
                 ToolMessage(
                     content=json.dumps(result),

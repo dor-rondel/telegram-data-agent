@@ -8,15 +8,14 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from enum import Enum
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_groq import ChatGroq
 
 from agent.prompts import PLAN_SYSTEM_PROMPT, PLAN_USER_PROMPT_TEMPLATE
 from agent.state import IncidentCrime, IncidentData, State
+from agent.utils import get_groq_llm
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +29,6 @@ class CrimeType(str, Enum):
     STABBING = "stabbing"
     SHOOTING = "shooting"
     THEFT = "theft"
-
-
-def _get_llm() -> ChatGroq:
-    """Get configured ChatGroq instance for planning."""
-    return ChatGroq(
-        api_key=os.environ.get("GROQ_API_KEY"),  # type: ignore[arg-type]
-        model=os.environ.get("GROQ_MODEL_NAME", "llama-3.3-70b-versatile"),
-        temperature=0,
-        max_tokens=1024,
-    )
 
 
 def _parse_plan_response(response_text: str) -> dict[str, Any]:
@@ -127,7 +116,7 @@ async def plan_node(state: State) -> dict[str, Any]:
             "plan_reason": "No translated text provided",
         }
 
-    llm = _get_llm()
+    llm = get_groq_llm()
 
     user_prompt = PLAN_USER_PROMPT_TEMPLATE.format(
         translated_text=translated_text,

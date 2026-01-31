@@ -8,28 +8,15 @@ from __future__ import annotations
 
 import logging
 import os
-import time
-from datetime import UTC, datetime
 from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
 
 from agent.state import IncidentData
+from agent.utils import execute_with_retry, get_current_timestamp
 
 logger = logging.getLogger(__name__)
-
-MAX_RETRIES = 3
-RETRY_BASE_DELAY_SECONDS = 1.0
-
-
-def _get_current_timestamp() -> str:
-    """Get current UTC timestamp as ISO 8601 string.
-
-    Returns:
-        ISO 8601 formatted timestamp string (e.g., "2026-01-31T12:30:45Z").
-    """
-    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _get_ses_client() -> Any:
@@ -133,60 +120,6 @@ Timestamp: {timestamp}
 This is an automated alert from the Telegram Data Agent."""
 
 
-def _execute_with_retry(operation: Any, operation_name: str) -> Any:
-    """Execute an SES operation with retry logic for transient errors.
-
-    Retries on transient errors with exponential backoff.
-    ServiceUnavailable errors are logged and return None immediately without retry.
-
-    Args:
-        operation: A callable that performs the SES operation.
-        operation_name: Human-readable name for logging purposes.
-
-    Returns:
-        The result of the operation, or None if ServiceUnavailable.
-
-    Raises:
-        ClientError: If a non-retryable, non-ServiceUnavailable error occurs
-            or all retries are exhausted.
-    """
-    last_exception: ClientError | None = None
-
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            return operation()
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "")
-
-            if error_code == "ServiceUnavailable":
-                logger.error(
-                    "SES %s failed with ServiceUnavailable (early return): %s",
-                    operation_name,
-                    str(e),
-                )
-                return None
-
-            last_exception = e
-            delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
-            logger.warning(
-                "SES %s attempt %d/%d failed with %s. Retrying in %.1f seconds...",
-                operation_name,
-                attempt,
-                MAX_RETRIES,
-                error_code,
-                delay,
-            )
-            time.sleep(delay)
-
-    logger.error(
-        "SES %s failed after %d retries: %s",
-        operation_name,
-        MAX_RETRIES,
-        str(last_exception),
-    )
-    raise last_exception  # type: ignore[misc]
-
-
 def send_email(incident: IncidentData) -> dict[str, Any]:
     """Send a terror incident alert email via AWS SES.
 
@@ -217,7 +150,7 @@ def send_email(incident: IncidentData) -> dict[str, Any]:
     crime_display = _format_crime_type(incident["crime"])
     subject = f"Terror Incident Alert: {crime_display} at {incident['location']}"
 
-    timestamp = _get_current_timestamp()
+    timestamp = get_current_timestamp()
     html_body = _build_html_email(incident, timestamp)
     text_body = _build_plain_text_email(incident, timestamp)
 
@@ -243,7 +176,9 @@ def send_email(incident: IncidentData) -> dict[str, Any]:
                 },
             )
 
-        result = _execute_with_retry(send_operation, "send_email")
+        result = execute_with_retry(
+            send_operation, "SES send_email", raise_on_service_unavailable=False
+        )
 
         if result is None:
             # ServiceUnavailable case - early return without crashing
@@ -261,6 +196,6 @@ def send_email(incident: IncidentData) -> dict[str, Any]:
 
     except ClientError as e:
         # All retries exhausted - log error but don't crash
-        error_msg = f"Failed to send email after {MAX_RETRIES} retries: {e}"
+        error_msg = f"Failed to send email after retries: {e}"
         logger.error(error_msg)
         return {"alert_complete": True, "error": error_msg}

@@ -9,19 +9,18 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import time
-from datetime import UTC, datetime
 from typing import Any
 
 import boto3
-from botocore.exceptions import ClientError
 
 from agent.state import IncidentData
+from agent.utils import (
+    execute_with_retry,
+    extract_year_month_from_iso,
+    get_current_timestamp,
+)
 
 logger = logging.getLogger(__name__)
-
-MAX_RETRIES = 3
-RETRY_BASE_DELAY_SECONDS = 1.0
 
 
 def _generate_incident_id(incident: IncidentData, created_at: str) -> str:
@@ -36,27 +35,6 @@ def _generate_incident_id(incident: IncidentData, created_at: str) -> str:
     """
     key_string = f"{incident['location']}:{incident['crime']}:{created_at}"
     return hashlib.sha256(key_string.encode()).hexdigest()
-
-
-def _get_current_timestamp() -> str:
-    """Get current UTC timestamp as ISO 8601 string.
-
-    Returns:
-        ISO 8601 formatted timestamp string (e.g., "2026-01-31T12:30:45Z").
-    """
-    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _extract_year_month_from_iso(iso_timestamp: str) -> str:
-    """Extract year-month string from ISO 8601 timestamp.
-
-    Args:
-        iso_timestamp: ISO 8601 formatted timestamp string.
-
-    Returns:
-        Year-month string in format "YYYY-MM" (e.g., "2026-01").
-    """
-    return iso_timestamp[:7]
 
 
 def _get_dynamodb_table() -> Any:
@@ -85,59 +63,6 @@ def _get_partition_key_name() -> str:
     return os.environ.get("DYNAMODB_PARTITION_KEY", "year_month")
 
 
-def _execute_with_retry(operation: Any, operation_name: str) -> Any:
-    """Execute a DynamoDB operation with retry logic for transient errors.
-
-    Retries on transient errors with exponential backoff.
-    ServiceUnavailable errors are logged and raised immediately without retry.
-
-    Args:
-        operation: A callable that performs the DynamoDB operation.
-        operation_name: Human-readable name for logging purposes.
-
-    Returns:
-        The result of the operation.
-
-    Raises:
-        ClientError: If a non-retryable error occurs or all retries are exhausted.
-    """
-    last_exception: ClientError | None = None
-
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            return operation()
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "")
-
-            if error_code == "ServiceUnavailable":
-                logger.error(
-                    "DynamoDB %s failed with ServiceUnavailable (no retry): %s",
-                    operation_name,
-                    str(e),
-                )
-                raise
-
-            last_exception = e
-            delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
-            logger.warning(
-                "DynamoDB %s attempt %d/%d failed with %s. Retrying in %.1f seconds...",
-                operation_name,
-                attempt,
-                MAX_RETRIES,
-                error_code,
-                delay,
-            )
-            time.sleep(delay)
-
-    logger.error(
-        "DynamoDB %s failed after %d retries: %s",
-        operation_name,
-        MAX_RETRIES,
-        str(last_exception),
-    )
-    raise last_exception  # type: ignore[misc]
-
-
 def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
     """Upsert an incident to DynamoDB organized by year-month.
 
@@ -162,8 +87,8 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
         ClientError: If a DynamoDB operation fails after retries.
         KeyError: If required environment variables are not set.
     """
-    created_at = _get_current_timestamp()
-    year_month = _extract_year_month_from_iso(created_at)
+    created_at = get_current_timestamp()
+    year_month = extract_year_month_from_iso(created_at)
     incident_id = _generate_incident_id(incident, created_at)
 
     logger.info(
@@ -188,7 +113,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
         response = table.get_item(Key={partition_key: year_month})
         return response.get("Item")
 
-    existing_item = _execute_with_retry(get_existing_item, "get_item")
+    existing_item = execute_with_retry(get_existing_item, "DynamoDB get_item")
 
     if existing_item is not None:
         # Check for duplicate incident
@@ -216,7 +141,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
                 ExpressionAttributeValues={":new_incident": [incident_entry]},
             )
 
-        _execute_with_retry(update_item, "update_item")
+        execute_with_retry(update_item, "DynamoDB update_item")
         logger.info(
             "Appended incident to existing partition: year_month=%s, incident_id=%s",
             year_month,
@@ -232,7 +157,7 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
                 }
             )
 
-        _execute_with_retry(put_item, "put_item")
+        execute_with_retry(put_item, "DynamoDB put_item")
         logger.info(
             "Created new partition with incident: year_month=%s, incident_id=%s",
             year_month,

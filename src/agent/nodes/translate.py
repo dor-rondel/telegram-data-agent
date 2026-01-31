@@ -6,11 +6,9 @@ Translates Hebrew text to English using Groq LLM.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_groq import ChatGroq
 
 from agent.prompts import (
     TRANSLATE_FEEDBACK_SECTION,
@@ -18,19 +16,9 @@ from agent.prompts import (
     TRANSLATE_USER_PROMPT_TEMPLATE,
 )
 from agent.state import State
-from agent.utils import sanitize_user_input
+from agent.utils import get_groq_llm, sanitize_user_input
 
 logger = logging.getLogger(__name__)
-
-
-def _get_llm() -> ChatGroq:
-    """Get configured ChatGroq instance."""
-    return ChatGroq(
-        api_key=os.environ.get("GROQ_API_KEY"),  # type: ignore[arg-type]
-        model=os.environ.get("GROQ_MODEL_NAME", "llama-3.3-70b-versatile"),
-        temperature=0,
-        max_tokens=4096,
-    )
 
 
 def _build_user_prompt(
@@ -73,7 +61,7 @@ async def translate_node(state: State) -> dict[str, Any]:
     if not sanitized_input:
         return {"translated_text": ""}
 
-    llm = _get_llm()
+    llm = get_groq_llm(max_tokens=4096)
     user_prompt = _build_user_prompt(sanitized_input, feedback, previous_translation)
 
     messages = [
