@@ -15,14 +15,14 @@ dotenv.load_dotenv()
 
 
 async def main() -> None:
-    """Run the graph with a minimal sample input."""
+    """Run the graph with a minimal sample input. Mirrors Lambda handler function invocation after extracting necessary fields from the POST request that triggered it."""
     initial_state: State = {
         "input_text": 'ז"א באזור חברון',
         "score": 0.0,
         "threshold": 0.8,
         "iteration": 0,
         "max_iterations": 5,
-        # Dummy worker loop controls
+        # Worker loop controls
         "remaining_tool_calls": 1,
         "worker_max_iterations": 10,
     }  # type: ignore[arg-type]

@@ -7,9 +7,9 @@ import agent.nodes.plan as plan_module
 
 def test_parse_plan_response_not_relevant_includes_reason() -> None:
     result = plan_module._parse_plan_response(
-        '{"relevant": false, "reason": "Not West Bank"}'
+        '{"relevant": false, "reason": "Not Judea & Samaria"}'
     )
-    assert result == {"relevant": False, "reason": "Not West Bank"}
+    assert result == {"relevant": False, "reason": "Not Judea & Samaria"}
 
 
 def test_parse_plan_response_missing_relevant_defaults_to_not_relevant() -> None:

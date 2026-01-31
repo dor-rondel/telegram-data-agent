@@ -36,13 +36,13 @@ Valid crime types (use EXACTLY these values):
 
 You must respond with valid JSON in one of these formats:
 
-If the event is NOT relevant (not in West Bank OR not crime/terror):
+If the event is NOT relevant (not in Judea & Samaria OR not crime/terror):
 {
     "relevant": false,
     "reason": "Brief explanation why event is not relevant"
 }
 
-If the event IS relevant (in West Bank/Jerusalem AND is crime/terror):
+If the event IS relevant (in Judea & Samaria/Jerusalem AND is crime/terror):
 {
     "relevant": true,
     "location": "Extracted location name",

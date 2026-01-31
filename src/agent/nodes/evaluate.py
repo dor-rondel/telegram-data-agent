@@ -7,26 +7,15 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_groq import ChatGroq
 
 from agent.prompts import EVALUATE_SYSTEM_PROMPT, EVALUATE_USER_PROMPT_TEMPLATE
 from agent.state import State
+from agent.utils import get_groq_llm
 
 logger = logging.getLogger(__name__)
-
-
-def _get_llm() -> ChatGroq:
-    """Get configured ChatGroq instance for evaluation."""
-    return ChatGroq(
-        api_key=os.environ.get("GROQ_API_KEY"),  # type: ignore[arg-type]
-        model=os.environ.get("GROQ_MODEL_NAME", "llama-3.3-70b-versatile"),
-        temperature=0,
-        max_tokens=1024,
-    )
 
 
 def _parse_evaluation_response(response_text: str) -> dict[str, Any]:
@@ -76,7 +65,7 @@ async def evaluate_node(state: State) -> dict[str, Any]:
             "iteration": new_iteration,
         }
 
-    llm = _get_llm()
+    llm = get_groq_llm()
 
     user_prompt = EVALUATE_USER_PROMPT_TEMPLATE.format(
         original_text=input_text,
