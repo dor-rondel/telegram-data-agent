@@ -13,7 +13,7 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-from agent.state import IncidentData
+from agent.state import IncidentDataModel
 from agent.utils import execute_with_retry, get_current_timestamp
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def _format_crime_type(crime: str) -> str:
     return crime.replace("_", " ").title()
 
 
-def _build_html_email(incident: IncidentData, timestamp: str) -> str:
+def _build_html_email(incident: IncidentDataModel, timestamp: str) -> str:
     """Build styled HTML email body for terror incident alert.
 
     Args:
@@ -56,7 +56,7 @@ def _build_html_email(incident: IncidentData, timestamp: str) -> str:
     Returns:
         HTML-formatted email body string.
     """
-    crime_display = _format_crime_type(incident["crime"])
+    crime_display = _format_crime_type(incident.crime)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -74,7 +74,7 @@ def _build_html_email(incident: IncidentData, timestamp: str) -> str:
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold; width: 30%;">Location:</td>
-                <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{incident["location"]}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{incident.location}</td>
             </tr>
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-weight: bold;">Incident Type:</td>
@@ -93,7 +93,7 @@ def _build_html_email(incident: IncidentData, timestamp: str) -> str:
 </html>"""
 
 
-def _build_plain_text_email(incident: IncidentData, timestamp: str) -> str:
+def _build_plain_text_email(incident: IncidentDataModel, timestamp: str) -> str:
     """Build plain text email body for terror incident alert.
 
     Args:
@@ -103,7 +103,7 @@ def _build_plain_text_email(incident: IncidentData, timestamp: str) -> str:
     Returns:
         Plain text email body string.
     """
-    crime_display = _format_crime_type(incident["crime"])
+    crime_display = _format_crime_type(incident.crime)
 
     return f"""TERROR INCIDENT ALERT
 =====================
@@ -112,7 +112,7 @@ A terror incident has been reported and requires your attention.
 
 INCIDENT DETAILS:
 -----------------
-Location: {incident["location"]}
+Location: {incident.location}
 Incident Type: {crime_display}
 Timestamp: {timestamp}
 
@@ -120,7 +120,7 @@ Timestamp: {timestamp}
 This is an automated alert from the Telegram Data Agent."""
 
 
-def send_email(incident: IncidentData) -> dict[str, Any]:
+def send_email(incident: IncidentDataModel) -> dict[str, Any]:
     """Send a terror incident alert email via AWS SES.
 
     Sends a styled HTML email (with plain text fallback) to notify the
@@ -147,8 +147,8 @@ def send_email(incident: IncidentData) -> dict[str, Any]:
         logger.error(error_msg)
         return {"alert_complete": True, "error": error_msg}
 
-    crime_display = _format_crime_type(incident["crime"])
-    subject = f"Terror Incident Alert: {crime_display} at {incident['location']}"
+    crime_display = _format_crime_type(incident.crime)
+    subject = f"Terror Incident Alert: {crime_display} at {incident.location}"
 
     timestamp = get_current_timestamp()
     html_body = _build_html_email(incident, timestamp)
@@ -157,7 +157,7 @@ def send_email(incident: IncidentData) -> dict[str, Any]:
     logger.info(
         "Sending terror incident alert email to %s for incident at %s",
         recipient_email,
-        incident["location"],
+        incident.location,
     )
 
     try:

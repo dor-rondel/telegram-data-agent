@@ -32,25 +32,13 @@ Valid crime types (use EXACTLY these values):
 - shooting: Shooting or gunfire incidents
 - theft: Theft, robbery, or burglary
 
-## Output Format
+## Response Rules
 
-You must respond with valid JSON in one of these formats:
+- If the event is NOT relevant, set relevant to false and provide a reason.
+- If the event IS relevant, set relevant to true and fill in location, crime, \
+and requires_email_alert (true only for Jerusalem).
 
-If the event is NOT relevant (not in Judea & Samaria OR not crime/terror):
-{
-    "relevant": false,
-    "reason": "Brief explanation why event is not relevant"
-}
-
-If the event IS relevant (in Judea & Samaria/Jerusalem AND is crime/terror):
-{
-    "relevant": true,
-    "location": "Extracted location name",
-    "crime": "one of: rock_throwing, molotov_cocktail, ramming, stabbing, shooting, theft",
-    "requires_email_alert": true/false (true only if location is Jerusalem)
-}
-
-Output ONLY valid JSON, nothing else. Don't include markdown characters like ```json ``` \
+{format_instructions}\
 """
 
 PLAN_USER_PROMPT_TEMPLATE = """\

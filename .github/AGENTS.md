@@ -9,14 +9,39 @@ These instructions are authoritative for any automated coding agent working in t
 The graph flows through these nodes:
 
 1. **translate** → **evaluate** (loop until quality threshold met)
-2. **plan** (extracts `IncidentData`: location + crime type)
-3. **worker** (ReAct agent executing `push_to_dynamodb` and optionally `send_email`)
+2. **plan** (extracts `IncidentDataModel`: location + crime type)
+3. **worker** (validates an `ActionPlan` then executes `push_to_dynamodb` and optionally `send_email`)
+
+### Structured Output (Pydantic v2)
+
+All LLM outputs that require structured data are validated against Pydantic v2 models
+using LangChain's `with_structured_output()`. This eliminates manual JSON parsing and
+guarantees schema conformity at the LLM layer.
+
+- `PlanResponse` – plan node output (relevant, location, crime, requires_email_alert)
+- `EvaluationResponse` – evaluate node output (score 0-10, feedback)
+- `ActionPlan` / `WorkerAction` – worker node action list (action name, location, crime)
+- `IncidentDataModel` – shared incident payload model
+
+Crime types and worker action names use `typing.Literal` for compile-time and
+runtime validation.
 
 ### State Schema
 
-- `IncidentData` contains only `location` and `crime` (no timestamp)
+- `IncidentDataModel` contains only `location` and `crime` (no timestamp)
 - Timestamps are generated locally within each tool at execution time using ISO 8601 format
 - This design avoids state synchronization issues and ensures accurate timestamps
+
+### Structured Output (Pydantic v2)
+
+All LLM outputs are validated against Pydantic v2 models using LangChain's `with_structured_output()`:
+
+- **`PlanResponse`** – Validates plan node output (relevant flag, location, crime type, email alert flag)
+- **`EvaluationResponse`** – Validates evaluate node output (score 0-10, feedback)
+- **`ActionPlan`** / **`WorkerAction`** – Validates worker actions before any tool execution
+
+Crime types and worker action names use `typing.Literal` for compile-time and runtime validation.
+On parse/validation errors, nodes return safe state (e.g., `skip_processing=True`, `should_end=True`) and route to END rather than raising exceptions.
 
 ## Core Principles
 
@@ -55,7 +80,8 @@ Notes:
 - Use the standard library `typing` module for type annotations.
 - This repo uses `pyright` in `strict` mode; treat type errors as build failures.
 - Avoid `Any` unless there is a concrete, documented reason.
-- Prefer `TypedDict`, `dataclass`, and `Protocol` where they improve correctness.
+- Prefer `TypedDict`, `dataclass`, `Protocol`, and Pydantic `BaseModel` where they improve correctness.
+- Use Pydantic v2 models with `Literal` types for structured LLM output validation.
 - Use `from __future__ import annotations` in new modules.
 
 ## Security
@@ -112,6 +138,9 @@ Notes:
   - Example: `GROQ_API_KEY`
   - Example: `GROQ_MODEL` (or an equivalent project-specific variable)
 - Do not hardcode model names, API keys, endpoints, or prompts in multiple places; centralize configuration.
+- Use `llm.with_structured_output(PydanticModel)` for nodes that require structured responses.
+  - Define output models in `agent.state` using Pydantic v2 `BaseModel` with `Literal` types.
+  - On validation failures, return safe state values that route the graph to END rather than raising.
 - Unit tests must not make network calls to Groq.
   - Use dependency injection and fakes/mocks for LangChain LLM clients.
   - Prefer narrow interfaces around "generate"/"invoke" behavior so tests validate prompting and post-processing deterministically.

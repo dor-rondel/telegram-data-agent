@@ -1,7 +1,7 @@
 """LangGraph agent with TRANSLATE → EVALUATE loop, PLAN, and worker nodes.
 
 Flow:
-  START → TRANSLATE → EVALUATE → (loop until score >= threshold) → PLAN → WORKER → END
+  START → TRANSLATE → EVALUATE → (loop until evaluation_score >= threshold) → PLAN → WORKER → END
 
 If max iterations reached without meeting threshold, routes to END with error state.
 If event is not relevant (not in Judea & Samaria or not crime/terror), PLAN routes to END.
@@ -27,11 +27,11 @@ def route_after_evaluate(
 ) -> Literal["translate", "plan", "__end__"]:
     """Decide whether to continue the translate/evaluate loop or proceed to plan.
 
-    Returns "plan" if score >= threshold.
+    Returns "plan" if evaluation_score >= threshold.
     Returns "__end__" if max iterations reached without meeting threshold.
     Returns "translate" to continue the loop.
     """
-    score = state.get("score", 0.0)
+    score = state.get("evaluation_score", 0.0)
     threshold = state.get("threshold", 0.75)
     iteration = state.get("iteration", 0)
     max_iterations = state.get("max_iterations", 5)

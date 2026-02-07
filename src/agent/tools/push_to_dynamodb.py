@@ -13,7 +13,7 @@ from typing import Any
 
 import boto3
 
-from agent.state import IncidentData
+from agent.state import IncidentDataModel
 from agent.utils import (
     execute_with_retry,
     extract_year_month_from_iso,
@@ -23,7 +23,7 @@ from agent.utils import (
 logger = logging.getLogger(__name__)
 
 
-def _generate_incident_id(incident: IncidentData, created_at: str) -> str:
+def _generate_incident_id(incident: IncidentDataModel, created_at: str) -> str:
     """Generate a unique incident ID by hashing location, crime, and timestamp.
 
     Args:
@@ -33,7 +33,7 @@ def _generate_incident_id(incident: IncidentData, created_at: str) -> str:
     Returns:
         A SHA-256 hash string uniquely identifying the incident.
     """
-    key_string = f"{incident['location']}:{incident['crime']}:{created_at}"
+    key_string = f"{incident.location}:{incident.crime}:{created_at}"
     return hashlib.sha256(key_string.encode()).hexdigest()
 
 
@@ -63,7 +63,7 @@ def _get_partition_key_name() -> str:
     return os.environ.get("DYNAMODB_PARTITION_KEY", "year_month")
 
 
-def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
+def push_to_dynamodb(incident: IncidentDataModel) -> dict[str, Any]:
     """Upsert an incident to DynamoDB organized by year-month.
 
     Incidents are stored in monthly partitions with the partition key being
@@ -103,8 +103,8 @@ def push_to_dynamodb(incident: IncidentData) -> dict[str, Any]:
     # Build the incident entry with its ID
     incident_entry = {
         "incident_id": incident_id,
-        "location": incident["location"],
-        "crime": incident["crime"],
+        "location": incident.location,
+        "crime": incident.crime,
         "created_at": created_at,
     }
 

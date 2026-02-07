@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agent.state import IncidentData
+from agent.state import IncidentDataModel
 from agent.tools.send_email import (
     _build_html_email,
     _build_plain_text_email,
@@ -40,10 +40,7 @@ def test_format_crime_type_theft() -> None:
 
 def test_build_html_email_contains_terror_alert() -> None:
     """Test that HTML email contains terror incident alert header."""
-    incident: IncidentData = {
-        "location": "Test Location",
-        "crime": "rock_throwing",
-    }
+    incident = IncidentDataModel(location="Test Location", crime="rock_throwing")
 
     html = _build_html_email(incident, "2026-01-31T12:00:00Z")
     assert "Terror Incident Alert" in html
@@ -52,10 +49,7 @@ def test_build_html_email_contains_terror_alert() -> None:
 
 def test_build_html_email_contains_incident_details() -> None:
     """Test that HTML email contains all incident details."""
-    incident: IncidentData = {
-        "location": "Jerusalem Central",
-        "crime": "molotov_cocktail",
-    }
+    incident = IncidentDataModel(location="Jerusalem Central", crime="molotov_cocktail")
     timestamp = "2026-01-31T12:00:00Z"
 
     html = _build_html_email(incident, timestamp)
@@ -67,10 +61,7 @@ def test_build_html_email_contains_incident_details() -> None:
 
 def test_build_html_email_structure() -> None:
     """Test that HTML email has proper structure and styling."""
-    incident: IncidentData = {
-        "location": "Test Location",
-        "crime": "stabbing",
-    }
+    incident = IncidentDataModel(location="Test Location", crime="stabbing")
 
     html = _build_html_email(incident, "2026-01-31T12:00:00Z")
 
@@ -93,10 +84,7 @@ def test_build_html_email_structure() -> None:
 
 def test_build_plain_text_email_contains_terror_alert() -> None:
     """Test that plain text email contains terror incident alert header."""
-    incident: IncidentData = {
-        "location": "Test Location",
-        "crime": "rock_throwing",
-    }
+    incident = IncidentDataModel(location="Test Location", crime="rock_throwing")
 
     text = _build_plain_text_email(incident, "2026-01-31T12:00:00Z")
     assert "TERROR INCIDENT ALERT" in text
@@ -105,10 +93,7 @@ def test_build_plain_text_email_contains_terror_alert() -> None:
 
 def test_build_plain_text_email_contains_incident_details() -> None:
     """Test that plain text email contains all incident details."""
-    incident: IncidentData = {
-        "location": "Tel Aviv",
-        "crime": "shooting",
-    }
+    incident = IncidentDataModel(location="Tel Aviv", crime="shooting")
     timestamp = "2026-01-31T12:00:00Z"
 
     text = _build_plain_text_email(incident, timestamp)
@@ -120,10 +105,7 @@ def test_build_plain_text_email_contains_incident_details() -> None:
 
 def test_build_plain_text_email_structure() -> None:
     """Test that plain text email has proper structure."""
-    incident: IncidentData = {
-        "location": "Haifa",
-        "crime": "ramming",
-    }
+    incident = IncidentDataModel(location="Haifa", crime="ramming")
 
     text = _build_plain_text_email(incident, "2026-01-31T12:00:00Z")
 
@@ -138,10 +120,7 @@ def test_build_plain_text_email_structure() -> None:
 
 def test_build_plain_text_email_with_special_characters() -> None:
     """Test that plain text email handles special characters in location."""
-    incident: IncidentData = {
-        "location": "Jerusalem - Old City",
-        "crime": "theft",
-    }
+    incident = IncidentDataModel(location="Jerusalem - Old City", crime="theft")
 
     text = _build_plain_text_email(incident, "2026-01-31T12:00:00Z")
     assert "Jerusalem - Old City" in text
@@ -150,10 +129,7 @@ def test_build_plain_text_email_with_special_characters() -> None:
 
 def test_build_html_email_with_special_characters() -> None:
     """Test that HTML email handles special characters in location."""
-    incident: IncidentData = {
-        "location": "Jerusalem - Old City",
-        "crime": "theft",
-    }
+    incident = IncidentDataModel(location="Jerusalem - Old City", crime="theft")
 
     html = _build_html_email(incident, "2026-01-31T12:00:00Z")
     assert "Jerusalem - Old City" in html

@@ -18,7 +18,7 @@ async def main() -> None:
     """Run the graph with a minimal sample input. Mirrors Lambda handler function invocation after extracting necessary fields from the POST request that triggered it."""
     initial_state: State = {
         "input_text": 'ז"א באזור חברון',
-        "score": 0.0,
+        "evaluation_score": 0.0,
         "threshold": 0.8,
         "iteration": 0,
         "max_iterations": 5,

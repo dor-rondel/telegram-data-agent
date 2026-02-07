@@ -10,7 +10,7 @@ class TestRouteAfterEvaluate:
 
     def test_routes_to_plan_when_score_meets_threshold(self) -> None:
         state: dict[str, Any] = {
-            "score": 0.8,
+            "evaluation_score": 0.8,
             "threshold": 0.75,
             "iteration": 1,
             "max_iterations": 5,
@@ -19,7 +19,7 @@ class TestRouteAfterEvaluate:
 
     def test_routes_to_plan_when_score_equals_threshold(self) -> None:
         state: dict[str, Any] = {
-            "score": 0.75,
+            "evaluation_score": 0.75,
             "threshold": 0.75,
             "iteration": 1,
             "max_iterations": 5,
@@ -28,7 +28,7 @@ class TestRouteAfterEvaluate:
 
     def test_routes_to_end_when_max_iterations_reached(self) -> None:
         state: dict[str, Any] = {
-            "score": 0.5,
+            "evaluation_score": 0.5,
             "threshold": 0.75,
             "iteration": 5,
             "max_iterations": 5,
@@ -37,7 +37,7 @@ class TestRouteAfterEvaluate:
 
     def test_routes_to_translate_to_continue_loop(self) -> None:
         state: dict[str, Any] = {
-            "score": 0.5,
+            "evaluation_score": 0.5,
             "threshold": 0.75,
             "iteration": 2,
             "max_iterations": 5,
@@ -51,7 +51,7 @@ class TestRouteAfterEvaluate:
 
     def test_high_score_bypasses_iteration_check(self) -> None:
         state: dict[str, Any] = {
-            "score": 1.0,
+            "evaluation_score": 1.0,
             "threshold": 0.75,
             "iteration": 10,
             "max_iterations": 5,

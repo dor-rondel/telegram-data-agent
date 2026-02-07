@@ -19,12 +19,6 @@ Evaluate the translation based on these criteria:
 - Completeness: Is all content from the original text translated?
 - Tone preservation: Does the translation maintain the original tone and intent?
 
-Provide your response in the following JSON format ONLY:
-{{
-    "score": <number from 0 to 10>,
-    "feedback": "<constructive feedback on how to improve the translation, or empty string if score >= 7.5>"
-}}
-
 Scoring guidelines:
 - 0-3: Poor translation with major errors or missing content
 - 4-6: Adequate translation with some issues
@@ -34,7 +28,7 @@ Scoring guidelines:
 If the score is 7.5 or above, the feedback field should be an empty string.
 If the score is below 7.5, provide specific, actionable feedback on how to improve.
 
-Output ONLY the JSON object, nothing else.\
+{format_instructions}\
 """
 """User prompt template for the evaluate node."""
 
