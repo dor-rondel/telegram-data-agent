@@ -20,6 +20,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from agent.prompts import PLAN_SYSTEM_PROMPT, PLAN_USER_PROMPT_TEMPLATE
 from agent.state import IncidentDataModel, PlanResponse, State
 from agent.utils import get_groq_llm
+from agent.utils.structured_output import ainvoke_structured_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,6 @@ async def plan_node(state: State) -> dict[str, Any]:
         }
 
     llm = get_groq_llm()
-    structured_llm = llm.with_structured_output(PlanResponse)
 
     system_prompt = PLAN_SYSTEM_PROMPT.format(
         format_instructions=_plan_parser.get_format_instructions(),
@@ -69,7 +69,16 @@ async def plan_node(state: State) -> dict[str, Any]:
     ]
 
     try:
-        result = cast(PlanResponse, await structured_llm.ainvoke(messages))
+        result = cast(
+            PlanResponse,
+            await ainvoke_structured_with_fallback(
+                llm=llm,
+                schema=PlanResponse,
+                parser=_plan_parser,
+                messages=messages,
+                logger=logger,
+            ),
+        )
     except Exception:
         logger.exception("Plan node failed")
         return {

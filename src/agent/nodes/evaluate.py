@@ -18,6 +18,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from agent.prompts import EVALUATE_SYSTEM_PROMPT, EVALUATE_USER_PROMPT_TEMPLATE
 from agent.state import EvaluationResponse, State
 from agent.utils import get_groq_llm
+from agent.utils.structured_output import ainvoke_structured_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,6 @@ async def evaluate_node(state: State) -> dict[str, Any]:
         }
 
     llm = get_groq_llm()
-    structured_llm = llm.with_structured_output(EvaluationResponse)
 
     system_prompt = EVALUATE_SYSTEM_PROMPT.format(
         format_instructions=_eval_parser.get_format_instructions(),
@@ -69,7 +69,16 @@ async def evaluate_node(state: State) -> dict[str, Any]:
     ]
 
     try:
-        result = cast(EvaluationResponse, await structured_llm.ainvoke(messages))
+        result = cast(
+            EvaluationResponse,
+            await ainvoke_structured_with_fallback(
+                llm=llm,
+                schema=EvaluationResponse,
+                parser=_eval_parser,
+                messages=messages,
+                logger=logger,
+            ),
+        )
     except Exception:
         logger.exception("Evaluation failed")
         result = EvaluationResponse(

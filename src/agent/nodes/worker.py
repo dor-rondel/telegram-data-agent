@@ -20,6 +20,7 @@ from agent.state import ActionPlan, IncidentDataModel, State
 from agent.tools import push_to_dynamodb as push_to_dynamodb_impl
 from agent.tools import send_email as send_email_impl
 from agent.utils import get_groq_llm
+from agent.utils.structured_output import ainvoke_structured_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,6 @@ async def worker_node(state: State) -> dict[str, Any]:
             }
 
     llm = get_groq_llm()
-    structured_llm = llm.with_structured_output(ActionPlan)
 
     system_prompt = WORKER_SYSTEM_PROMPT.format(
         format_instructions=_action_parser.get_format_instructions(),
@@ -129,7 +129,16 @@ async def worker_node(state: State) -> dict[str, Any]:
     ]
 
     try:
-        action_plan = cast(ActionPlan, await structured_llm.ainvoke(messages))
+        action_plan = cast(
+            ActionPlan,
+            await ainvoke_structured_with_fallback(
+                llm=llm,
+                schema=ActionPlan,
+                parser=_action_parser,
+                messages=messages,
+                logger=logger,
+            ),
+        )
     except Exception:
         logger.exception("Worker failed to produce a valid action plan")
         return {
