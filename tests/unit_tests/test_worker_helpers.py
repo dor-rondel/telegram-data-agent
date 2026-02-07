@@ -3,6 +3,7 @@
 from typing import Any
 
 from agent.nodes.worker import _build_user_prompt
+from agent.state import IncidentDataModel
 
 
 class TestBuildUserPrompt:
@@ -10,7 +11,9 @@ class TestBuildUserPrompt:
 
     def test_builds_prompt_with_incident_data(self) -> None:
         state: dict[str, Any] = {
-            "incident_data": {"location": "Jerusalem", "crime": "rock_throwing"},
+            "incident_data": IncidentDataModel(
+                location="Jerusalem", crime="rock_throwing"
+            ),
             "requires_email_alert": True,
             "plan_reason": "Relevant incident detected",
         }
@@ -47,10 +50,10 @@ class TestBuildUserPrompt:
 
     def test_includes_execution_instruction(self) -> None:
         state: dict[str, Any] = {
-            "incident_data": {"location": "Hebron", "crime": "stabbing"},
+            "incident_data": IncidentDataModel(location="Hebron", crime="stabbing"),
             "requires_email_alert": False,
             "plan_reason": "Test reason",
         }
         prompt = _build_user_prompt(state)  # type: ignore[arg-type]
 
-        assert "Execute the appropriate tools" in prompt
+        assert "Produce an action plan" in prompt

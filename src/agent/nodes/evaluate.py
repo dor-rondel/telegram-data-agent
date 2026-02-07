@@ -1,37 +1,28 @@
 """EVALUATE node.
 
 Evaluates translation quality using an LLM and provides feedback.
+
+Uses Pydantic-validated structured output to guarantee response format.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any
+
+# with_structured_output returns BaseModel | dict; we know it's EvaluationResponse.
+from typing import Any, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.output_parsers import PydanticOutputParser
 
 from agent.prompts import EVALUATE_SYSTEM_PROMPT, EVALUATE_USER_PROMPT_TEMPLATE
-from agent.state import State
+from agent.state import EvaluationResponse, State
 from agent.utils import get_groq_llm
+from agent.utils.structured_output import ainvoke_structured_with_fallback
 
 logger = logging.getLogger(__name__)
 
-
-def _parse_evaluation_response(response_text: str) -> dict[str, Any]:
-    """Parse the LLM evaluation response JSON.
-
-    Args:
-        response_text: Raw response text from the LLM.
-
-    Returns:
-        Dictionary with 'score' (normalized 0-1) and 'feedback' keys.
-    """
-    parsed = json.loads(response_text.strip())
-    return {
-        "score": float(parsed["score"]) / 10.0,
-        "feedback": str(parsed["feedback"]),
-    }
+_eval_parser = PydanticOutputParser(pydantic_object=EvaluationResponse)
 
 
 async def evaluate_node(state: State) -> dict[str, Any]:
@@ -45,9 +36,6 @@ async def evaluate_node(state: State) -> dict[str, Any]:
 
     Returns:
         Dictionary with score, feedback, and incremented iteration count.
-
-    Raises:
-        TranslationEvaluationError: If max iterations reached with score below threshold.
     """
     input_text = state.get("input_text", "")
     translated_text = state.get("translated_text", "")
@@ -60,39 +48,46 @@ async def evaluate_node(state: State) -> dict[str, Any]:
 
     if not translated_text:
         return {
-            "score": 0.0,
+            "evaluation_score": 0.0,
             "feedback": "No translation provided.",
             "iteration": new_iteration,
         }
 
     llm = get_groq_llm()
 
+    system_prompt = EVALUATE_SYSTEM_PROMPT.format(
+        format_instructions=_eval_parser.get_format_instructions(),
+    )
     user_prompt = EVALUATE_USER_PROMPT_TEMPLATE.format(
         original_text=input_text,
         translated_text=translated_text,
     )
 
     messages = [
-        SystemMessage(content=EVALUATE_SYSTEM_PROMPT),
+        SystemMessage(content=system_prompt),
         HumanMessage(content=user_prompt),
     ]
 
     try:
-        response = await llm.ainvoke(messages)
-        response_text = str(response.content) if response.content else ""
-        result = _parse_evaluation_response(response_text)
-    except json.JSONDecodeError:
-        logger.exception("Failed to parse evaluation response")
-        result = {
-            "score": 0.0,
-            "feedback": "Evaluation parsing failed. Please re-translate.",
-        }
+        result = cast(
+            EvaluationResponse,
+            await ainvoke_structured_with_fallback(
+                llm=llm,
+                schema=EvaluationResponse,
+                parser=_eval_parser,
+                messages=messages,
+                logger=logger,
+            ),
+        )
     except Exception:
         logger.exception("Evaluation failed")
-        raise
+        result = EvaluationResponse(
+            score=0.0,
+            feedback="Evaluation parsing failed. Please re-translate.",
+        )
 
-    score = result["score"]
-    feedback = result["feedback"]
+    score = result.score / 10.0
+    feedback = result.feedback
 
     # Check if we've exhausted iterations without meeting threshold
     error_message = ""
@@ -104,7 +99,7 @@ async def evaluate_node(state: State) -> dict[str, Any]:
         logger.warning(error_message)
 
     return {
-        "score": score,
+        "evaluation_score": score,
         "feedback": feedback,
         "iteration": new_iteration,
         "error_message": error_message,

@@ -1,6 +1,6 @@
-"""Tools exposed to the ReAct agent.
+"""Tools available to the worker agent.
 
-Each tool is a stub (no real side effects). Replace implementations later.
+Each tool accepts an IncidentDataModel and returns a result dict.
 """
 
 from agent.tools.push_to_dynamodb import push_to_dynamodb

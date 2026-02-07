@@ -9,11 +9,13 @@ Target runtime: AWS Lambda.
 The agent processes incident reports through a multi-node LangGraph pipeline:
 
 1. **Translate Node** – Translates Hebrew Telegram messages to English using Groq LLM
-2. **Evaluate Node** – Scores translation quality and provides feedback for refinement
-3. **Plan Node** – Analyzes translated text to extract structured incident data (location, crime type) and determines if email alerts are needed
-4. **Worker Node** – ReAct-style agent that executes tools based on the plan:
+2. **Evaluate Node** – Scores translation quality (Pydantic `EvaluationResponse` model) and provides feedback for refinement
+3. **Plan Node** – Analyzes translated text with structured output (Pydantic `PlanResponse` model) to extract incident data (location, crime type) and determines if email alerts are needed
+4. **Worker Node** – Produces a validated `ActionPlan` (Pydantic model) listing tools to execute, then runs them in order:
    - `push_to_dynamodb` – Stores incidents in monthly partitions with deduplication
    - `send_email` – Sends styled HTML alerts via AWS SES for high-priority incidents
+
+All LLM outputs are validated against Pydantic v2 models using LangChain's `with_structured_output()`, eliminating manual JSON parsing and guaranteeing schema conformity at the LLM layer.
 
 ![Graph Visualization](static/graph.png)
 
