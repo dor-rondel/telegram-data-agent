@@ -3,7 +3,7 @@ name = "telegram-data-agent"
 version = "0.0.1"
 description = "Data aggregating Telegram agent"
 authors = [
-    { name = "Dor Rondel", email = "dor.rondel@gmail.com" },
+    { name = "Dor Rondel", email = "dor.rondel@proton.me" },
 ]
 readme = "README.md"
 license = { text = "MIT" }
